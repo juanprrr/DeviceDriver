@@ -1,0 +1,1 @@
+cmd_/home/juan/Desktop/Embebidos/Taller8/src/memory.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000  --build-id  -T ./scripts/module-common.lds -o /home/juan/Desktop/Embebidos/Taller8/src/memory.ko /home/juan/Desktop/Embebidos/Taller8/src/memory.o /home/juan/Desktop/Embebidos/Taller8/src/memory.mod.o;  true

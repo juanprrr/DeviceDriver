@@ -7,9 +7,9 @@
 #include <linux/errno.h>  /* error codes */
 #include <linux/types.h>  /* size_t */
 #include <linux/proc_fs.h>
-#include <linux/fcntl.h> /* O_ACCMODE */
+#include <linux/fcntl.h>   /* O_ACCMODE */
 #include <linux/uaccess.h> /* copy_from/to_user */
-#include <asm/uaccess.h> 
+#include <asm/uaccess.h>
 MODULE_LICENSE("Dual BSD/GPL");
 #define B_SIZE 4
 /* Declaration of memory.c functions */
@@ -37,7 +37,7 @@ module_exit(memory_exit);
 /* Major number */
 int memory_major = 60;
 /* Buffer to store data */
-char *memory_buffer;
+char*memory_buffer;
 
 void memory_exit(void)
 {
@@ -67,7 +67,9 @@ int memory_init(void)
     }
 
     /* Allocating memory for the buffer */
-    memory_buffer = kmalloc(1, GFP_KERNEL);
+   
+    memory_buffer = (char*)kmalloc(B_SIZE * sizeof(char), GFP_KERNEL);
+
     if (!memory_buffer)
     {
         result = -ENOMEM;
@@ -75,15 +77,13 @@ int memory_init(void)
     }
 
     /*Set buffer to 0 by default */
-    memset(memory_buffer, 0, 1);
+    memset(memory_buffer, 0, B_SIZE * sizeof(char));
     printk("<1>Inserting memory module\n");
     return 0;
 fail:
     memory_exit();
     return result;
 }
-
-
 
 int memory_open(struct inode *inode, struct file *filp)
 {
@@ -99,22 +99,38 @@ int memory_release(struct inode *inode, struct file *filp)
 
 ssize_t memory_read(struct file *filp, char *buf, size_t count, loff_t *f_pos)
 {
-    /* Changing reading position as best suits */
-    if (*f_pos == 0)
-    {
-        *f_pos += 1;
-        /* Transfering data to user space */
-        copy_to_user(buf, memory_buffer, 1);
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    char bytes_to_copy;
+    
+    if (*f_pos >= B_SIZE * sizeof(char))
+        return 0;  
+
+    // Determine how many bytes to copy
+    
+    bytes_to_copy = min(count, B_SIZE * sizeof(char) - *f_pos);
+
+    
+    if (copy_to_user(buf, memory_buffer + *f_pos / sizeof(char), bytes_to_copy) != 0)
+        return -EFAULT;  
+
+    // Update file position
+    *f_pos += bytes_to_copy;
+
+    return bytes_to_copy;
 }
 
 ssize_t memory_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos)
 {
-    copy_from_user(memory_buffer, buf, 1);
-    return 1;
+    char bytes_to_copy;
+
+    if (*f_pos >= B_SIZE * sizeof(char))
+        return 0;  
+    
+    bytes_to_copy = min(count, B_SIZE * sizeof(char) - *f_pos);
+
+    if (copy_from_user(memory_buffer + *f_pos / sizeof(char), buf, bytes_to_copy) != 0)
+        return -EFAULT;  
+
+    *f_pos += bytes_to_copy;
+
+    return bytes_to_copy;
 }
