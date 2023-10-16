@@ -1,0 +1,5 @@
+make -C /usr/src/linux-headers-$(uname -r) M=$(pwd modules)
+link dev: sudo mknod /dev/memory c 60 0
+install mod: sudo insmod src/memory.ko
+unprotect: sudo chmod 666 /dev/memory
+write 1 byte: echo -n H >/dev/memory
